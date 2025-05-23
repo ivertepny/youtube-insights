@@ -24,7 +24,6 @@ services:
     depends_on:
       - db
     environment:
-      - IN_DOCKER=true
       - SECRET_KEY=${SECRET_KEY}
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=${POSTGRES_PORT}

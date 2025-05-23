@@ -12,7 +12,6 @@ WORKDIR /usr/src
 RUN apt-get update && apt-get install --no-install-recommends -y \
     gcc \
     libpq-dev \
-    graphviz \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip
@@ -29,5 +28,6 @@ EXPOSE 8000
 COPY . .
 
 # Default entrypoint and command
-ENTRYPOINT ["sh", "-c"]
-CMD ["python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+#CMD sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+
+CMD ["sh", "-c", "python manage.py makemigrations users && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]

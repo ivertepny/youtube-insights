@@ -11,7 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG')
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(",") if os.getenv('ALLOWED_HOSTS') else []
 
@@ -68,7 +69,6 @@ WSGI_APPLICATION = 'Youtube_insights.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-IN_DOCKER = os.environ.get("IN_DOCKER", "False").lower() == "true"
 
 DATABASES = {
     'default': {
@@ -76,9 +76,9 @@ DATABASES = {
         'NAME': os.environ.get('POSTGRES_DB'),
         'USER': os.environ.get('POSTGRES_USER'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-        'HOST': os.environ.get('POSTGRES_HOST') if IN_DOCKER else 'localhost',
+        'HOST': os.environ.get('POSTGRES_HOST'),
         # Use 'db' in Docker, 'localhost' otherwise
-        'PORT': os.environ.get('POSTGRES_PORT')
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     },
 }
 
