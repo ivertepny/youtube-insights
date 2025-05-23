@@ -1,5 +1,7 @@
+# api/youtube_client.py
 import os
 from googleapiclient.discovery import build
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
@@ -58,3 +60,12 @@ class YouTubeClient:
                 "subs": int(item["statistics"].get("subscriberCount", 0))
             }
         return stats
+
+    def get_transcript(self, video_id):
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            return " ".join([t["text"] for t in transcript])
+        except (TranscriptsDisabled, NoTranscriptFound):
+            return ""
+        except Exception:
+            return ""
