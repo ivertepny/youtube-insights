@@ -1,19 +1,11 @@
 # api/serializers.py
 from rest_framework import serializers
-from api.models import VideoInsight
 
-
-class VideoInsightSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VideoInsight
-        fields = [
-            "video_id",
-            "channel_id",
-            "title",
-            "description",
-            "views",
-            "subs",
-            "score",
-            "insight",
-            "created_at"
-        ]
+class VideoInsightSerializer(serializers.Serializer):
+    video_id = serializers.CharField()
+    title = serializers.CharField()
+    views = serializers.IntegerField()
+    subs = serializers.IntegerField()
+    score = serializers.FloatField()
+    description = serializers.CharField()
+    insight = serializers.CharField()

@@ -14,11 +14,14 @@ openai_client = OpenAIClient()
 
 
 class YouTubeVideoSearchView(APIView):
+    serializer_class = VideoInsightSerializer  # ← ключова строка
+
     @extend_schema(
         parameters=[
             OpenApiParameter(name="q", description="Search keywords", required=True, type=str),
             OpenApiParameter(name="max_results", description="Max number of results", required=False, type=int),
         ],
+        responses=VideoInsightSerializer(many=True),  # ← для схеми
         description="Searches YouTube videos and filters hidden gems (high views / low subs)."
     )
     def get(self, request):
