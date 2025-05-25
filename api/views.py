@@ -55,6 +55,7 @@ class YouTubeVideoSearchView(APIView):
                     "video_id": vid,
                     "title": v["title"],
                     "channel_id": cid,
+                    "channel_title": v["channel_title"],
                     "views": views,
                     "subs": subs,
                     "score": round(score, 2),
@@ -76,6 +77,7 @@ class YouTubeVideoSearchView(APIView):
                         defaults={
                             "title": item["title"],
                             "description": item["description"],
+                            "channel_title": item["channel_title"],
                             "views": item["views"],
                             "subs": item["subs"],
                             "score": item["score"],

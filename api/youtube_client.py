@@ -24,10 +24,12 @@ class YouTubeClient:
             video_id = item["id"]["videoId"]
             title = item["snippet"]["title"]
             channel_id = item["snippet"]["channelId"]
+            channel_title = item["snippet"].get("channelTitle", "")
             videos.append({
                 "video_id": video_id,
                 "title": title,
                 "channel_id": channel_id,
+                "channel_title": channel_title,
             })
         return videos
 

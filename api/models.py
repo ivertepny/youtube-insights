@@ -5,6 +5,7 @@ class VideoInsight(models.Model):
     video_id = models.CharField(max_length=32, unique=True)
     title = models.TextField()
     description = models.TextField(blank=True)
+    channel_title = models.CharField(max_length=255, blank=True)
     views = models.PositiveIntegerField()
     subs = models.PositiveIntegerField()
     score = models.FloatField()
