@@ -1,13 +1,11 @@
 # api/openai_client.py
 import os
-import openai
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
+from openai import OpenAI
 
 class OpenAIClient:
     def __init__(self, model="gpt-3.5-turbo"):
         self.model = model
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def generate_insight(self, title, description):
         prompt = (
@@ -19,7 +17,7 @@ class OpenAIClient:
         )
 
         try:
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=100,

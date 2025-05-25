@@ -29,13 +29,12 @@ class YouTubeVideoSearchView(APIView):
     def get(self, request):
         query = request.GET.get("q")
         max_results = int(request.GET.get("max_results", 20))
-        published_after = request.GET.get("published_after")
 
         if not query:
             return Response({"error": "Missing required parameter: q"}, status=400)
 
         yt = YouTubeClient()
-        videos = yt.search_videos(query, max_results=max_results, published_after=published_after)
+        videos = yt.search_videos(query, max_results=max_results)
         video_ids = [v["video_id"] for v in videos]
         channel_ids = [v["channel_id"] for v in videos]
 
@@ -46,33 +45,32 @@ class YouTubeVideoSearchView(APIView):
         for v in videos:
             vid = v["video_id"]
             cid = v["channel_id"]
-            title = v["title"]
             views = video_stats.get(vid, {}).get("views", 0)
             subs = channel_stats.get(cid, {}).get("subs", 0) or 1
             score = views / subs
             description = video_stats.get(vid, {}).get("description", "")
 
-            # Отримуємо транскрипт і формуємо текст для GPT
-            transcript = yt.get_transcript(vid)
-            gpt_input = transcript if transcript else f"{title}\n\n{description}"
-            insight = openai_client.generate_insight(gpt_input)
-
             results.append({
                 "video_id": vid,
-                "title": title,
+                "title": v["title"],
                 "channel_id": cid,
                 "views": views,
                 "subs": subs,
                 "score": round(score, 2),
                 "description": description,
-                "insight": insight,
-                "transcript": transcript
             })
 
-        # Сортуємо за співвідношенням views / subs
+        # Сортуємо за співвідношенням
         results = sorted(results, key=lambda x: x["score"], reverse=True)[:10]
 
         for item in results:
+            transcript = yt.get_transcript(item["video_id"])
+            full_description = f"{item['description']}\n\n{transcript}".strip()
+
+            insight = openai_client.generate_insight(item["title"], full_description)
+            item["insight"] = insight
+
+            # Зберегти або оновити в базі
             VideoInsight.objects.update_or_create(
                 video_id=item["video_id"],
                 defaults={
@@ -81,8 +79,7 @@ class YouTubeVideoSearchView(APIView):
                     "views": item["views"],
                     "subs": item["subs"],
                     "score": item["score"],
-                    "insight": item["insight"],
-                    "transcript": item["transcript"],
+                    "insight": insight,
                 }
             )
 
