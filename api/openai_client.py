@@ -2,8 +2,9 @@
 import os
 from openai import OpenAI
 
+
 class OpenAIClient:
-    def __init__(self, model="gpt-3.5-turbo"):
+    def __init__(self, model="gpt-4o"):
         self.model = model
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
