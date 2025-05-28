@@ -3,83 +3,146 @@ import streamlit as st
 import requests
 import pandas as pd
 
+API_URL = "http://api:8000"
+SEARCH_URL = f"{API_URL}/api/videos/search/"
+LOGIN_URL = f"{API_URL}/api/users/login/"
+REGISTER_URL = f"{API_URL}/api/users/register/"
+LOGOUT_URL = f"{API_URL}/api/users/logout/"
+
 st.set_page_config(page_title="YouTube Insights", layout="wide")
 
-# 🔒 Приховати Deploy, Rerun, Settings
-hide_streamlit_style = """
+# 🔒 Hide Streamlit UI elements
+st.markdown("""
     <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-        .stDeployButton {display: none;}
-        button[title="Rerun"] {display: none;}
-        button[title="View app settings"] {display: none;}
+        #MainMenu, footer, header, .stDeployButton, button[title="Rerun"], button[title="View app settings"] {
+            display: none;
+        }
     </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-st.title("📊 YouTube Hidden Gems Finder")
-
-API_URL = "http://api:8000/api/videos/search/"
-
-query = st.text_input("🔍 Search Query", value="ai")
-max_results = st.slider("🎯 Max Results", 5, 50, 20)
-published_after = st.date_input("📅 Published After (optional)")
-category_id = st.text_input("🎞️ Video Category ID (optional)", value="")
-
-# Ініціалізуємо session_state для зберігання результатів, якщо його немає
+# --- Session Initialization ---
+if "access" not in st.session_state:
+    st.session_state.access = None
+if "refresh" not in st.session_state:
+    st.session_state.refresh = None
+if "user_email" not in st.session_state:
+    st.session_state.user_email = None
 if "df_display" not in st.session_state:
     st.session_state.df_display = None
 
-# Кнопка пошуку — робимо запит і зберігаємо результат у сесії
-if st.button("Search"):
-    params = {
-        "q": query,
-        "max_results": max_results,
-    }
-    if published_after:
-        params["published_after"] = published_after.isoformat() + "T00:00:00Z"
-    if category_id:
-        params["video_category_id"] = category_id
+# --- Auth Navigation ---
+page = st.sidebar.selectbox("Navigation", ["Login", "Register", "Main App", "Logout"])
 
-    with st.spinner("🔎 Fetching results..."):
-        try:
-            response = requests.get(API_URL, params=params)
-            response.raise_for_status()
+# --- Register Page ---
+if page == "Register":
+    st.title("📝 Register")
+    with st.form("register_form"):
+        email = st.text_input("Email")
+        first_name = st.text_input("First Name")
+        last_name = st.text_input("Last Name")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Register")
+
+    if submitted:
+        payload = {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "password": password,
+        }
+        res = requests.post(REGISTER_URL, json=payload)
+        if res.status_code == 201:
+            st.success("✅ Registration successful. Please login.")
+        else:
+            st.error(f"❌ Registration failed: {res.json()}")
+
+# --- Login Page ---
+elif page == "Login":
+    st.title("🔐 Login")
+    with st.form("login_form"):
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
+
+    if submitted:
+        payload = {"email": email, "password": password}
+        res = requests.post(LOGIN_URL, json=payload)
+        if res.status_code == 200:
+            data = res.json()
+            st.session_state.access = data["token"]["access"]
+            st.session_state.refresh = data["token"]["refresh"]
+            st.session_state.user_email = data["user"]["email"]
+            st.success("✅ Login successful!")
+        else:
+            st.error(f"❌ Login failed: {res.json()}")
+
+# --- Logout Page ---
+elif page == "Logout":
+    st.title("🚪 Logout")
+    if st.session_state.refresh:
+        res = requests.post(LOGOUT_URL, json={"refresh": st.session_state.refresh},
+                            headers={"Authorization": f"Bearer {st.session_state.access}"})
+        if res.status_code in [200, 205]:
+            st.success("✅ Logged out successfully.")
+        else:
+            st.error(f"❌ Logout failed: {res.json()}")
+    else:
+        st.warning("⚠️ You are not logged in.")
+
+    # Clear session
+    st.session_state.access = None
+    st.session_state.refresh = None
+    st.session_state.user_email = None
+    st.session_state.df_display = None
+
+# --- Main App Page ---
+elif page == "Main App":
+    st.title("📊 YouTube Hidden Gems Finder")
+
+    if not st.session_state.access:
+        st.warning("⚠️ You must be logged in to use this feature.")
+        st.stop()
+
+    query = st.text_input("🔍 Search Query", value="ai")
+    max_results = st.slider("🎯 Max Results", 5, 50, 20)
+    published_after = st.date_input("📅 Published After (optional)")
+    category_id = st.text_input("🎞️ Video Category ID (optional)", value="")
+
+    if st.button("Search"):
+        params = {
+            "q": query,
+            "max_results": max_results,
+        }
+        if published_after:
+            params["published_after"] = published_after.isoformat() + "T00:00:00Z"
+        if category_id:
+            params["video_category_id"] = category_id
+
+        with st.spinner("🔎 Fetching results..."):
             try:
+                response = requests.get(SEARCH_URL, params=params)
+                response.raise_for_status()
                 data = response.json()
-            except requests.exceptions.JSONDecodeError:
-                st.error("❌ Failed to decode JSON. Response might be empty or malformed.")
-                st.text(response.text)
-                st.stop()
-
-            if not data:
-                st.warning("⚠️ No results found.")
-                st.session_state.df_display = None
-            else:
-                df = pd.DataFrame(data)
-                required_cols = ["title", "channel_title", "views", "subs", "score", "insight", "video_id"]
-                missing_cols = [col for col in required_cols if col not in df.columns]
-                if missing_cols:
-                    st.error(f"❌ Missing expected columns in response: {missing_cols}")
-                    st.dataframe(df)  # show raw result for debugging
+                if not data:
+                    st.warning("⚠️ No results found.")
                     st.session_state.df_display = None
                 else:
-                    df["video_link"] = "https://www.youtube.com/watch?v=" + df["video_id"]
-                    df_display = df[["title", "channel_title", "views", "subs", "score", "insight", "video_link"]]
-                    df_display = df_display.rename(columns={"video_link": "🔗 Link"})
-                    st.session_state.df_display = df_display
-        except requests.exceptions.RequestException as e:
-            st.error(f"❌ Request failed: {e}")
-            st.session_state.df_display = None
+                    df = pd.DataFrame(data)
+                    required = ["title", "channel_title", "views", "subs", "score", "insight", "video_id"]
+                    if not all(col in df.columns for col in required):
+                        st.error("❌ Some expected fields are missing.")
+                        st.dataframe(df)
+                        st.session_state.df_display = None
+                    else:
+                        df["video_link"] = "https://www.youtube.com/watch?v=" + df["video_id"]
+                        df_display = df[["title", "channel_title", "views", "subs", "score", "insight", "video_link"]]
+                        df_display = df_display.rename(columns={"video_link": "🔗 Link"})
+                        st.session_state.df_display = df_display
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Request failed: {e}")
+                st.session_state.df_display = None
 
-# Відображаємо збережений результат, якщо він є
-if st.session_state.df_display is not None:
-    st.dataframe(st.session_state.df_display)
-    csv = st.session_state.df_display.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Download CSV",
-        data=csv,
-        file_name='youtube_insights.csv',
-        mime='text/csv',
-    )
+    if st.session_state.df_display is not None:
+        st.dataframe(st.session_state.df_display)
+        csv = st.session_state.df_display.to_csv(index=False).encode("utf-8")
+        st.download_button("📥 Download CSV", csv, "youtube_insights.csv", "text/csv")
