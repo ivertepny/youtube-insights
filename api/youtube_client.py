@@ -65,7 +65,7 @@ class YouTubeClient:
 
     def get_transcript(self, video_id):
         try:
-            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            transcript = YouTubeTranscriptApi.fetch(video_id)
             return " ".join([t["text"] for t in transcript])
         except (TranscriptsDisabled, NoTranscriptFound):
             return ""
