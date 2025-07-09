@@ -14,8 +14,13 @@ st.set_page_config(page_title="YouTube Insights", layout="wide")
 # 🔒 Hide Streamlit UI elements
 st.markdown("""
     <style>
-        #MainMenu, footer, header, .stDeployButton, button[title="Rerun"], button[title="View app settings"] {
-            display: none;
+        #MainMenu, footer, header,
+        .stDeployButton,
+        button[title="Rerun"],
+        button[title="View app settings"],
+        [data-testid="stDeploymentIndicator"],
+        [data-testid="stStatusWidget"] {
+            display: none !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -29,9 +34,15 @@ if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "df_display" not in st.session_state:
     st.session_state.df_display = None
+if "Navigation" not in st.session_state:
+    st.session_state["Navigation"] = "Login"
 
 # --- Auth Navigation ---
-page = st.sidebar.selectbox("Navigation", ["Login", "Register", "Main App", "Logout"])
+page = st.sidebar.selectbox(
+    "Navigation",
+    ["Login", "Register", "Main App", "Logout"],
+    index=["Login", "Register", "Main App", "Logout"].index(st.session_state["Navigation"])
+)
 
 # --- Register Page ---
 if page == "Register":
@@ -52,7 +63,9 @@ if page == "Register":
         }
         res = requests.post(REGISTER_URL, json=payload)
         if res.status_code == 201:
-            st.success("✅ Registration successful. Please login.")
+            st.toast("✅ Registration successful. Redirecting to login...", icon="✅")
+            st.session_state["Navigation"] = "Login"
+            st.rerun()
         else:
             st.error(f"❌ Registration failed: {res.json()}")
 
@@ -72,7 +85,9 @@ elif page == "Login":
             st.session_state.access = data["token"]["access"]
             st.session_state.refresh = data["token"]["refresh"]
             st.session_state.user_email = data["user"]["email"]
-            st.success("✅ Login successful!")
+            st.toast("✅ Login successful. Redirecting...", icon="🔓")
+            st.session_state["Navigation"] = "Main App"
+            st.rerun()
         else:
             st.error(f"❌ Login failed: {res.json()}")
 
@@ -83,17 +98,19 @@ elif page == "Logout":
         res = requests.post(LOGOUT_URL, json={"refresh": st.session_state.refresh},
                             headers={"Authorization": f"Bearer {st.session_state.access}"})
         if res.status_code in [200, 205]:
-            st.success("✅ Logged out successfully.")
+            st.toast("✅ Logged out successfully.", icon="🚪")
         else:
             st.error(f"❌ Logout failed: {res.json()}")
     else:
         st.warning("⚠️ You are not logged in.")
 
-    # Clear session
+    # Clear session and redirect to login
     st.session_state.access = None
     st.session_state.refresh = None
     st.session_state.user_email = None
     st.session_state.df_display = None
+    st.session_state["Navigation"] = "Login"
+    st.rerun()
 
 # --- Main App Page ---
 elif page == "Main App":

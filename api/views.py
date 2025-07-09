@@ -28,7 +28,7 @@ class YouTubeVideoSearchView(APIView):
     )
     def get(self, request):
         query = request.GET.get("q")
-        max_results = int(request.GET.get("max_results", 20))
+        max_results = int(request.GET.get("max_results", 50))
 
         if not query:
             return Response({"error": "Missing required parameter: q"}, status=status.HTTP_400_BAD_REQUEST)
@@ -62,7 +62,7 @@ class YouTubeVideoSearchView(APIView):
                     "description": description,
                 })
 
-            results = sorted(results, key=lambda x: x["score"], reverse=True)[:10]
+            results = sorted(results, key=lambda x: x["score"], reverse=True)[:max_results]
 
             for item in results:
                 try:
